@@ -1,0 +1,270 @@
+<html>
+<body> 
+<style type="text/css"> textarea {resize: none;} </style>
+<h3 id="reEditingName" style="z-index:3;position:absolute; left:200px;bottom:135;"></h3>
+<div id="myOverviewDiv" style="z-index:2;border:2px solid #000000 solid;width:100px; height:100px; background-color: #C4C4C4;position:absolute; right:415px; top:5px;border-radius: 10px;"></div>
+<div id="myDiagramDiv" style="z-index:1;border:1px #ccc solid;position:absolute; top:0px; left:185px; right:405px; bottom:135px;background-color: #E6E6E6;"></div>
+<div id="myPaletteDiv" style="border:1px #ccc solid;width:180px; background-color: #E6E6E6;position:absolute; top:0px; left:0px; bottom: 0px;"></div>
+<div id="option" style="border:2px #ccc solid;position:absolute; bottom:0px; left:185px; right:405px; height:130px;background-color: #E6E6E6;">
+  <input type="button" value="saveAsBehaviorTree" onclick="save()">
+  <input type="button" value="loadDataFromComp" onclick="load()">
+  <input type="button" value="addBehaviorTreeLib" onclick="add()">
+  <input type="button" value="generateTreeNodeTemplate" onclick="generate()">
+  <input type="button" value="leaveReEditingMode" onclick="leave()">
+</div>
+<div id="jsonEditorDiv" style="border:1px #ccc solid;width:400px;background-color: #E6E6E6;position:absolute; right:0px; bottom:0px;top: 0px;"></div>
+<link href="./jsoneditor.css" rel="stylesheet" type="text/css">
+
+<script src="./jsoneditor.js"></script>
+<script>
+    var uuid = null;
+
+    var container = document.getElementById("jsonEditorDiv");
+    var options = {
+    mode: 'tree',
+    modes: ['code', 'form', 'text', 'tree', 'view'], // allowed modes
+    onError: function (err) {
+      Editor.Dialog.messageBox ({
+            type:"none",
+            buttons: ["shut up"],
+            title:"tips",
+            message: err.toString(),
+            detail:"fix node's parameter json format please !"
+          },function(){});
+    }
+    };
+    var editor = new JSONEditor(container,options);
+    //  var json = {
+    //         "Array": [1, 2, 3],
+    //         "Boolean": true,
+    //         "Null": null,
+    //         "Number": 123,
+    //         "Object": {"a": "b", "c": "d"},
+    //         "String": "Hello World"
+    //     };
+    //     editor.set(json);
+
+    var editKey = null;
+
+    var go = require("gojs");
+
+    var $$ = go.GraphObject.make;
+
+    
+
+    // var testReset = function(e,obj){
+    //   if(editKey){  
+    //     let node = myDiagram.findNodeForKey(editKey);
+    //     //let value = document.getElementById("txt").value;
+    //     let value = JSON.stringify(editor.get(), null, 2);
+    //     myDiagram.model.startTransaction("change parameter");
+    //     myDiagram.model.setDataProperty(node.data, "parameter", editor.getText());
+    //     myDiagram.model.commitTransaction("change parameter");
+    //   }
+    //   editKey = null;
+    //   //document.getElementById("txt").value = "";
+    //   //editor.set(JSON.parse(obj.data.paramter));
+    //   editor.setText('{}');
+    // }
+    
+    // var testSet = function(e,obj){
+    //   if(editKey){  
+    //     let node = myDiagram.findNodeForKey(editKey);
+    //     //let value = document.getElementById("txt").value;
+    //     //let value = JSON.stringify(editor.get(), null, 2);
+    //     //Editor.log(value);
+    //     //Editor.log(key);
+    //     myDiagram.model.startTransaction("change parameter");
+    //     myDiagram.model.setDataProperty(node.data, "parameter", editor.getText());
+    //     myDiagram.model.commitTransaction("change parameter");
+    //   }
+    //   if(obj){
+    //   Editor.log(obj.data);
+    //   editKey = obj.data.key;
+    //   //document.getElementById("txt").value = "";
+    //   Editor.log(obj.data.parameter);
+    //   //editor.set(JSON.parse(obj.data.paramter));
+    //   editor.setText(obj.data.parameter);
+    //   //editor.set(JSON.parse({}));
+    //   }
+    // }
+
+    var myDiagram = $$(go.Diagram, "myDiagramDiv");
+    myDiagram.allowDrop = true;
+    myDiagram.undoManager.isEnabled = true;
+    myDiagram.toolManager.linkingTool.isEnabled = false;
+    myDiagram.toolManager.mouseWheelBehavior = go.ToolManager.WheelZoom;
+    myDiagram.scrollMode = go.Diagram.InfiniteScroll;
+    myDiagram.toolManager.draggingTool.dragsTree = true;
+
+    myDiagram.model = new go.TreeModel();
+
+
+    myDiagram.addDiagramListener("ChangedSelection",function(e){
+        if(editKey){  
+          let node = myDiagram.findNodeForKey(editKey);
+          if(node){
+            myDiagram.model.startTransaction("change parameter");
+            myDiagram.model.setDataProperty(node.data, "parameter", editor.getText());
+            myDiagram.model.commitTransaction("change parameter");
+          }
+        }
+        let selection = e.diagram.selection;
+        let count = selection.count;
+        if(count == 1){
+          let obj = selection.first();
+          editKey = obj.data.key;
+          //document.getElementById("txt").value = "";
+          //Editor.log(obj.data.parameter);
+          //editor.set(JSON.parse(obj.data.paramter));
+          editor.setText(obj.data.parameter);
+        }else{
+          editKey = null;
+          editor.setText('{"focus":"dragram"}');
+        }
+    });
+
+
+    document.addEventListener("keydown",function(e){if(e.key == 'a'){myDiagram.toolManager.linkingTool.isEnabled = true;}}.bind(this));
+    document.addEventListener("keyup",function(e){if(e.key == 'a'){myDiagram.toolManager.linkingTool.isEnabled = false;}}.bind(this));
+
+    myDiagram.nodeTemplate =
+    $$(go.Node, "Vertical",{ background: "transparent", locationSpot: go.Spot.Center},new go.Binding("location","loc",go.Point.parse),
+      
+      $$(go.Panel, "Auto",  
+         $$(go.Shape, "Circle",
+            { fill: "lightgrey", strokeWidth: 1, stroke: 'black', width: 20, height: 20 },
+            new go.Binding("fill","color")
+            ),
+         $$(go.Picture,
+            { width: 14, height: 14},
+            new go.Binding("source", "src")),
+        { portId: "", fromLinkable: true, toLinkable: true, cursor: "pointer" }
+      ),  
+      $$(go.TextBlock,{name: "TEXT" },
+        new go.Binding("text", "name").makeTwoWay(),
+        new go.Binding("editable", "textEditable"))
+    );
+
+    var myPalette = $$(go.Palette, "myPaletteDiv");
+    myPalette.nodeTemplate = 
+    $$(go.Node, "Vertical",{ background: "transparent", locationSpot: go.Spot.Center },
+       $$(go.Panel, "Auto",  
+         $$(go.Shape, "Circle",
+            { fill: "lightgrey", strokeWidth: 1, stroke: 'black', width: 20, height: 20 },
+            new go.Binding("fill","color")
+            ),
+         $$(go.Picture,
+            { width: 14, height: 14},
+            new go.Binding("source", "src"))
+      ),  
+      $$(go.TextBlock,
+        new go.Binding("text", "name"))
+    );
+
+    myPalette.layout.comparer = function(a, b) {
+      // A and B are Parts
+      var av = a.data.key;
+      var bv = b.data.key;
+      if (av < bv) return 1;
+      if (av > bv) return -1;
+      return 0;
+    };
+
+    myPalette.model.nodeDataArray = [
+        {name: "Root", src:"icon/root.svg", type: 'Root', textEditable: false,color:'lightgreen',catagory: 'Composite',parameter:'{}'},
+        {name: "CustomAction", src:"icon/customaction.svg", type:'Action', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{}'},
+        {name: "CustomCondition", src:"icon/customcondition.svg", type:'Condition', textEditable: true,color:'palegoldenrod',catagory: 'Condition',parameter:'{}'},
+        {name: "CustomComposite", src:"icon/customcomposite.svg", type:'Composite', textEditable: true,color:'lightblue',catagory: 'Composite',parameter:'{}'},
+        {name: "CustomDecorator", src:"icon/customdecorator.svg", type:'Decorator', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{}'},
+        {name: "Sequence", src:"icon/sequence.svg", type:'Sequence', textEditable: true,color:'lightblue',catagory: 'Composite',parameter:'{}'},
+        {name: "Priority", src:"icon/priority.svg", type:'Priority', textEditable: true,color:'lightblue',catagory: 'Composite',parameter:'{}'},
+        {name: "MemSequence",src:"icon/mensequence.svg", type:'MemSequence', textEditable: true,color:'lightblue',catagory: 'Composite',parameter:'{}'},
+        {name: "MemPriority", src:"icon/menpriority.svg", type:'MemPriority', textEditable: true,color:'lightblue',catagory: 'Composite',parameter:'{}'},
+        {name: "Inverter", src:"icon/inverter.svg", type:'Inverter', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{}'},
+        {name: "Limiter", src:"icon/limit.svg", type:'Limiter', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{"maxLoop":0}'},
+        {name: "MaxTime", src:"icon/maxtime.svg", type:'MaxTime', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{"maxTime":0}'},
+        {name: "Repeater", src:"icon/repeat.svg", type:'Repeater', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{"maxLoop":0}'},
+        {name: "RepeaterUntilFailure", src:"icon/repeatuntilfailure.svg", type:'RepeaterUntilFailure', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{"maxLoop":0}'},
+        {name: "RepeaterUntilSuccess", src:"icon/repeatuntilsuccess.svg", type:'RepeaterUntilSuccess', textEditable: true,color:'pink',catagory: 'Decorator',parameter:'{"maxLoop":0}'},
+        {name: "Succeeder", src:"icon/succeeder.svg", type:'Succeeder', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{}'},
+        {name: "Failer", src:"icon/failer.svg", type:'Failer', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{}'},
+        {name: "Error", src:"icon/error.svg", type:'Error', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{}'},
+        {name: "Runner", src:"icon/running.svg", type:'Runner', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{}'},
+        {name: "Wait", src:"icon/wait.svg", type:'Wait', textEditable: true,color:'lightcoral',catagory: 'Action',parameter:'{"milliseconds":0}'},
+    ];
+
+    // myDiagram.model.nodeDataArray = [
+    // ];
+
+    var modelAsText;
+
+    var save = function(){
+        //check the last json
+        if(editKey){  
+          let node = myDiagram.findNodeForKey(editKey);
+          if(node){
+            myDiagram.model.startTransaction("change parameter");
+            myDiagram.model.setDataProperty(node.data, "parameter", editor.getText());
+            myDiagram.model.commitTransaction("change parameter");
+          }
+        }
+
+        modelAsText = myDiagram.model.toJson();
+        let modelAsObj = JSON.parse(modelAsText);
+        //console.log(modelAsText);
+        //get the msg we want by hand
+        for(let item of modelAsObj.nodeDataArray){
+            //let nodeData = myDiagram.model.findNodeDataForKey(item.key);
+            let part = myDiagram.findNodeForKey(item.key);
+            //console.log(nodeData);
+            let docloc = myDiagram.transformDocToView(part.location);
+            item.loc = docloc.x + " " + docloc.y;
+            let text = part.findObject("TEXT").text;
+            item.name = text;
+            //console.log(part);
+        }
+
+        //Editor.log(modelAsObj);
+        modelAsText = JSON.stringify(modelAsObj);
+        Editor.Ipc.sendToMain("behaviortree-editor:receive-json",modelAsObj);
+    }
+
+    var load = function(){
+      Editor.Ipc.sendToMain("behaviortree-editor:load-data-of-comp","",function(e,result){
+        //Editor.log(result);
+        if(!result.error){
+          myDiagram.model = go.Model.fromJson(result.reEditingModelString);
+          document.getElementById("reEditingName").innerText = result.reEditingName;
+        }
+      })
+       
+    }
+
+    var leave = function(){
+      Editor.Ipc.sendToMain("behaviortree-editor:leave-re-editing-mode","",function(e,result){
+        document.getElementById("reEditingName").innerText = "";
+      })
+    }
+
+    // function showPoint(loc,obj) {
+    // var docloc = myDiagram.transformDocToView(loc);
+    // var elt = document.getElementById("Message1");
+    // elt.innerText = "Node location, document coordinates: " + loc.x.toFixed(2) + " " + loc.y.toFixed(2) +
+    //                   "  view coordinates: " + docloc.x.toFixed(2) + " " + docloc.y.toFixed(2);
+    //console.log(obj);                    
+    //}
+    var myOverview =
+    $$(go.Overview, "myOverviewDiv",
+      { observed: myDiagram });
+
+    var add = function(){
+      Editor.Ipc.sendToMain("behaviortree-editor:add-lib");
+    }
+
+    var generate = function(){
+      Editor.Ipc.sendToMain("behaviortree-editor:generate-tree-node-template");
+    }
+</script>
+</body>
+</html>

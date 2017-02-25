@@ -1,0 +1,19 @@
+{
+  "name": "behaviortree-editor",
+  "version": "0.0.1",
+  "description": "行为树可视化编辑器",
+  "author": "Cocos Creator",
+  "main": "main.js",
+  "main-menu": {
+    "bt-editor/open": {
+      "message": "behaviortree-editor:open"
+    }
+  },
+  "panel": {
+    "main": "panel/index.html",
+    "type": "simple",
+    "title": "behaviortree-editor",
+    "width": "100%",
+    "height": "100%"
+  }
+}
