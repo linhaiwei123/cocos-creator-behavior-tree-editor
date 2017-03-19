@@ -1452,7 +1452,7 @@ b3.Action = Action;
  * @class Composite
  * @extends BaseNode
 **/
-var Composite = b3.Class(b3.BaseNode);
+var Composite = b3.Class(b3.z);
 
 var p = Composite.prototype;
 
@@ -2158,7 +2158,11 @@ var p = Limiter.prototype;
      * @param {Tick} tick A tick instance.
     **/
     p.open = function(tick) {
-        tick.blackboard.set('i', 0, tick.tree.id, this.id);
+        //[20170319]# 修复limiter因为返回success或failure而重置i
+        var i = tick.blackboard.get('i',tick.tree.id, this.id);
+        if(!i){
+            tick.blackboard.set('i', 0, tick.tree.id, this.id);
+        }
     }
 
     /**
